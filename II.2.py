@@ -15,7 +15,6 @@ def lookup_players(name=None, club=None):
         print("Please provide either --name or --club")
         return
 
-    # Gửi request đến Flask API
     try:
         response = requests.get(base_url, params=params)
         response.raise_for_status()
@@ -29,16 +28,13 @@ def lookup_players(name=None, club=None):
         print("No players found.")
         return
 
-    # In dữ liệu ra dạng bảng
     headers = data[0].keys()
     rows = [player.values() for player in data]
     print(tabulate(rows, headers=headers, tablefmt="grid"))
 
-    # Tạo tên file CSV hợp lệ
     filename_base = name if name else club
     filename = re.sub(r'[\\/*?:"<>|]', "", filename_base.replace(" ", "_")) + ".csv"
 
-    # Ghi dữ liệu ra CSV
     with open(filename, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
         writer.writerow(headers)
@@ -53,3 +49,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     lookup_players(name=args.name, club=args.club)
+
