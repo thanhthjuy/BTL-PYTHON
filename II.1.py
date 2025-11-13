@@ -40,5 +40,3 @@ def get_players_by_club():
 
 if __name__ == '__main__':
     app.run(debug=True)
-# http://127.0.0.1:5000/api/player?name=Mohamed Salah
-# http://127.0.0.1:5000/api/club?club=Liverpoolư
