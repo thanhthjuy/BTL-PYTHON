@@ -1,66 +1,55 @@
-import sqlite3
 import argparse
+import requests
 import csv
 import re
 from tabulate import tabulate
 
-def lookup_players(db_path, name=None, club=None):
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-
-    # Lấy tất cả cột trong bảng
-    cursor.execute("PRAGMA table_info(players)")
-    columns = [col[1] for col in cursor.fetchall()]
-
-    # Tạo câu truy vấn
-    query = "SELECT * FROM players"
-    params = []
-    conditions = []
+def lookup_players(name=None, club=None):
     if name:
-        conditions.append("player LIKE ?")
-        params.append(f"%{name}%")
-    if club:
-        conditions.append("club LIKE ?")
-        params.append(f"%{club}%")
-    if conditions:
-        query += " WHERE " + " AND ".join(conditions)
+        base_url = "http://127.0.0.1:5000/api/player"
+        params = {"name": name}
+    elif club:
+        base_url = "http://127.0.0.1:5000/api/club"
+        params = {"club": club}
     else:
         print("Please provide either --name or --club")
         return
 
-    cursor.execute(query, params)
-    rows = cursor.fetchall()
-    conn.close()
+    # Gửi request đến Flask API
+    try:
+        response = requests.get(base_url, params=params)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        print("Error connecting to Flask server:", e)
+        return
 
-    if not rows:
+    data = response.json()
+
+    if not data or (isinstance(data, dict) and "message" in data):
         print("No players found.")
         return
 
-    # In bảng ra màn hình
-    print(tabulate(rows, headers=columns, tablefmt="grid"))
+    # In dữ liệu ra dạng bảng
+    headers = data[0].keys()
+    rows = [player.values() for player in data]
+    print(tabulate(rows, headers=headers, tablefmt="grid"))
 
     # Tạo tên file CSV hợp lệ
     filename_base = name if name else club
     filename = re.sub(r'[\\/*?:"<>|]', "", filename_base.replace(" ", "_")) + ".csv"
 
-    # Lưu CSV
-    with open(filename, 'w', newline='', encoding='utf-8') as csvfile:
-        writer = csv.writer(csvfile)
-        writer.writerow(columns)
+    # Ghi dữ liệu ra CSV
+    with open(filename, "w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(headers)
         writer.writerows(rows)
 
     print(f"Results saved to {filename}")
 
-# ===== Main =====
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Lookup player data from players.db")
+    parser = argparse.ArgumentParser(description="Lookup player data via Flask API")
     parser.add_argument("--name", help="Player name to search")
     parser.add_argument("--club", help="Club name to search")
     args = parser.parse_args()
 
-    db_path = "players.db"
-    lookup_players(db_path, name=args.name, club=args.club)
-
-# python II.2.py --name "Mohamed Salah" --club "Liverpool"
-# python II.2.py --name "Mohamed Salah" 
-# python II.2.py --club "Liverpool"
+    lookup_players(name=args.name, club=args.club)
