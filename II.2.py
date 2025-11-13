@@ -49,4 +49,3 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     lookup_players(name=args.name, club=args.club)
-
